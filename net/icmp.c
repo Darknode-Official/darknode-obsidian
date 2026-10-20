@@ -31,7 +31,11 @@ void icmp_receive(uint32_t src_ip, const void *data, uint16_t length) {
         reply->sequence = hdr->sequence;
         /* Copy any payload data after the header */
         uint16_t payload_len = length - sizeof(icmp_header_t);
-        if (payload_len > 0 && payload_len < 1492)
+        /* Drop an oversized request before using payload_len: the checksum and
+         * send below both span sizeof(header)+payload_len, so a payload that
+         * doesn't fit reply_buf would otherwise over-read the stack buffer. */
+        if (payload_len > sizeof(reply_buf) - sizeof(icmp_header_t)) return;
+        if (payload_len > 0)
             memcpy(reply_buf + sizeof(icmp_header_t),
                    (const uint8_t *)data + sizeof(icmp_header_t), payload_len);
         reply->checksum = ip_checksum(reply_buf, sizeof(icmp_header_t) + payload_len);

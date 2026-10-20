@@ -171,8 +171,14 @@ void usb_hid_poll(void) {
         uint8_t buf[8];
         memset(buf, 0, sizeof(buf));
 
+        /* Clamp the transfer to our buffer: ep_in->max_packet comes straight
+         * from the device's endpoint descriptor (wMaxPacketSize) and a hostile
+         * or buggy device can report up to 64+ bytes, which would DMA past this
+         * 8-byte stack buffer (the HID boot report is only 8 bytes). */
+        int len = (int)hid_devs[i].ep_in->max_packet;
+        if (len > (int)sizeof(buf)) len = (int)sizeof(buf);
         int ret = usb_interrupt_transfer(hid_devs[i].dev, hid_devs[i].ep_in,
-                                         buf, hid_devs[i].ep_in->max_packet);
+                                         buf, len);
         if (ret != 0) continue; /* NAK or error — no data ready */
 
         if (hid_devs[i].type == 1) {

@@ -16,7 +16,7 @@ static uint32_t dns_server   = 0;
 
 uint32_t dhcp_get_dns(void) { return dns_server; }
 
-static uint8_t *dhcp_find_option(const uint8_t *opts, uint16_t opts_len, uint8_t opt_code) {
+static uint8_t *dhcp_find_option(const uint8_t *opts, uint16_t opts_len, uint8_t opt_code, uint8_t min_len) {
     uint16_t i = 0;
     while (i < opts_len) {
         uint8_t code = opts[i++];
@@ -25,7 +25,10 @@ static uint8_t *dhcp_find_option(const uint8_t *opts, uint16_t opts_len, uint8_t
         if (i >= opts_len) break;
         uint8_t len = opts[i++];
         if (i + len > opts_len) break; /* declared length runs past the buffer — reject (over-read guard) */
-        if (code == opt_code) return (uint8_t *)&opts[i];
+        /* Reject an option whose declared length is smaller than the caller
+         * will dereference (e.g. a 1-byte SERVER_ID read as a uint32_t would
+         * pull 3 bytes from the following option). */
+        if (code == opt_code) return (len >= min_len) ? (uint8_t *)&opts[i] : NULL;
         i += len;
     }
     return NULL;
@@ -43,13 +46,13 @@ static void dhcp_udp_handler(uint32_t src_ip, uint16_t src_port,
     uint16_t opts_len = length - 240;
     const uint8_t *opts = pkt->options;
 
-    uint8_t *msg_type = dhcp_find_option(opts, opts_len, DHCP_OPT_MSG_TYPE);
+    uint8_t *msg_type = dhcp_find_option(opts, opts_len, DHCP_OPT_MSG_TYPE, 1);
     if (!msg_type) return;
 
     if (*msg_type == DHCP_OFFER && dhcp_state == 1) {
         /* Got an offer — send DHCP REQUEST */
         offered_ip = pkt->yiaddr;
-        uint8_t *sid = dhcp_find_option(opts, opts_len, DHCP_OPT_SERVER_ID);
+        uint8_t *sid = dhcp_find_option(opts, opts_len, DHCP_OPT_SERVER_ID, 4);
         if (sid) server_ip = *(uint32_t *)sid;
 
         dhcp_packet_t req;
@@ -85,13 +88,13 @@ static void dhcp_udp_handler(uint32_t src_ip, uint16_t src_port,
         uint32_t subnet  = 0xFFFFFF00; /* default /24 */
         uint32_t gateway = 0;
 
-        uint8_t *sub = dhcp_find_option(opts, opts_len, DHCP_OPT_SUBNET);
+        uint8_t *sub = dhcp_find_option(opts, opts_len, DHCP_OPT_SUBNET, 4);
         if (sub) subnet = *(uint32_t *)sub;
 
-        uint8_t *gw = dhcp_find_option(opts, opts_len, DHCP_OPT_ROUTER);
+        uint8_t *gw = dhcp_find_option(opts, opts_len, DHCP_OPT_ROUTER, 4);
         if (gw) gateway = *(uint32_t *)gw;
 
-        uint8_t *dns = dhcp_find_option(opts, opts_len, DHCP_OPT_DNS);
+        uint8_t *dns = dhcp_find_option(opts, opts_len, DHCP_OPT_DNS, 4);
         if (dns) dns_server = *(uint32_t *)dns;
 
         ipv4_config(offered_ip, subnet, gateway);
