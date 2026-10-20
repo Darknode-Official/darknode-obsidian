@@ -101,6 +101,10 @@ void ipv4_receive(const void *data, uint16_t length) {
     uint16_t ihl = (hdr->ver_ihl & 0x0F) * 4;
     uint16_t total = ntohs(hdr->total_len);
     if (total > length) return;
+    /* IHL is attacker-controlled: reject a header that claims to be shorter than
+     * the minimum or longer than the packet, else `total - ihl` underflows (uint16)
+     * to ~64K and the checksum/payload read runs off the receive buffer. */
+    if (ihl < IP_HEADER_LEN || ihl > total) return;
 
     /* Verify checksum */
     if (ip_checksum(data, ihl) != 0) return;

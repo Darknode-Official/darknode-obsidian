@@ -24,6 +24,7 @@ static uint8_t *dhcp_find_option(const uint8_t *opts, uint16_t opts_len, uint8_t
         if (code == 0) continue; /* pad */
         if (i >= opts_len) break;
         uint8_t len = opts[i++];
+        if (i + len > opts_len) break; /* declared length runs past the buffer — reject (over-read guard) */
         if (code == opt_code) return (uint8_t *)&opts[i];
         i += len;
     }

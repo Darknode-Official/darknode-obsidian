@@ -54,6 +54,7 @@ void *kmalloc(size_t size) {
 void kfree(void *ptr) {
     if (!ptr) return;
     block_t *b = (block_t *)((uint8_t *)ptr - BLOCK_HDR);
+    if (b->free) return; /* double free: ignore — else heap_used_bytes underflows and the coalesce pass relinks an already-merged block */
     b->free = true;
     heap_used_bytes -= b->size;
 

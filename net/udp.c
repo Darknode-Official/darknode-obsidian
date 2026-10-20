@@ -95,7 +95,9 @@ void udp_receive(uint32_t src_ip, const void *data, uint16_t length) {
     uint16_t dst_port = ntohs(hdr->dst_port);
     uint16_t src_port = ntohs(hdr->src_port);
     uint16_t udp_len  = ntohs(hdr->length);
-    if (udp_len > length) return;
+    /* The UDP length field is attacker-controlled: reject undersize (else
+     * `udp_len - UDP_HEADER_LEN` underflows to ~64K) as well as oversize. */
+    if (udp_len < UDP_HEADER_LEN || udp_len > length) return;
 
     const uint8_t *payload = (const uint8_t *)data + UDP_HEADER_LEN;
     uint16_t payload_len = udp_len - UDP_HEADER_LEN;

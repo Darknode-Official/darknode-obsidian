@@ -198,19 +198,21 @@ static vfs_node_t *resolve_path(const char *path) {
     if (path[0] == '/') return vfs_resolve(path);
 
     char full[VFS_NAME_MAX];
-    strncpy(full, cwd, VFS_NAME_MAX - 1);
-    if (full[strlen(full) - 1] != '/') strcat(full, "/");
-    strcat(full, path);
+    strlcpy(full, cwd, VFS_NAME_MAX);
+    size_t len = strlen(full);
+    if (len && full[len - 1] != '/') strlcat(full, "/", VFS_NAME_MAX);
+    strlcat(full, path, VFS_NAME_MAX);
     return vfs_resolve(full);
 }
 
 static void build_full_path(const char *path, char *out) {
     if (path[0] == '/') {
-        strncpy(out, path, VFS_NAME_MAX - 1);
+        strlcpy(out, path, VFS_NAME_MAX);
     } else {
-        strncpy(out, cwd, VFS_NAME_MAX - 1);
-        if (out[strlen(out) - 1] != '/') strcat(out, "/");
-        strcat(out, path);
+        strlcpy(out, cwd, VFS_NAME_MAX);
+        size_t len = strlen(out);
+        if (len && out[len - 1] != '/') strlcat(out, "/", VFS_NAME_MAX);
+        strlcat(out, path, VFS_NAME_MAX);
     }
 }
 

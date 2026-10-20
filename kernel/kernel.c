@@ -131,7 +131,7 @@ void kmain(uint32_t magic, multiboot2_info_t *mbi) {
     {
         uint32_t dc = ata_drive_count();
         if (dc > 0) {
-            char atabuf[64];
+            char atabuf[256]; /* up to 4 drives x 40-char models + separators */
             itoa(dc, atabuf, 10);
             strcat(atabuf, " drive(s): ");
             for (uint32_t i = 0; i < dc; i++) {

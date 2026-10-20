@@ -58,6 +58,27 @@ char *strcat(char *dest, const char *src) {
     return dest;
 }
 
+/* Bounded copy/append (BSD semantics): always NUL-terminate within `size`,
+ * never write past it. Return the length the string would have had so callers
+ * can detect truncation. Used for path building where the source is attacker-
+ * or user-controlled and could otherwise overrun a fixed stack buffer. */
+size_t strlcpy(char *dst, const char *src, size_t size) {
+    size_t i = 0;
+    if (size) {
+        for (; i < size - 1 && src[i]; i++) dst[i] = src[i];
+        dst[i] = '\0';
+    }
+    while (src[i]) i++;
+    return i;
+}
+
+size_t strlcat(char *dst, const char *src, size_t size) {
+    size_t dl = 0;
+    while (dl < size && dst[dl]) dl++;          /* bounded length of dst */
+    if (dl == size) return size + strlen(src);  /* unterminated/full: do not write */
+    return dl + strlcpy(dst + dl, src, size - dl);
+}
+
 void itoa(int value, char *buf, int base) {
     char tmp[36];
     int i = 0, neg = 0;
