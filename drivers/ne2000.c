@@ -174,7 +174,10 @@ int ne2000_receive(void *buf, uint16_t max_len) {
     uint8_t hdr[4];
     ne_dma_read(bnry << 8, hdr, 4);
     uint16_t pkt_len = hdr[2] | (hdr[3] << 8);
-    pkt_len -= 4; /* subtract header */
+    /* The reported length includes the 4-byte NIC header; a value <= 4 is a runt/garbage descriptor.
+     * Clamp to 0 instead of letting the subtraction wrap to ~65532 (which the clamps below would then
+     * turn into a full max_len read of stale buffer). Fall through so BNRY still advances. */
+    pkt_len = (pkt_len > 4) ? (uint16_t)(pkt_len - 4) : 0;
 
     if (pkt_len > max_len) pkt_len = max_len;
     if (pkt_len > NE_MAX_PACKET) pkt_len = NE_MAX_PACKET;

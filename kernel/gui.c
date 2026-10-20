@@ -595,7 +595,10 @@ static void draw_setting_row(int x, int y, int w, const char *label, const char 
     fb_text(x, y, label, T_MUTED);
     int vx = x + 130;
     int max_chars = (w - 138) / 8;
-    if (max_chars < 1) max_chars = 1;
+    /* Floor at 3: the truncation path writes vbuf[max_chars-2], vbuf[max_chars-1], vbuf[max_chars];
+     * a value of 1 made vbuf[max_chars-2] == vbuf[-1], a stack out-of-bounds write when the window
+     * is dragged to its minimum width. fb_text clips the glyphs to the window either way. */
+    if (max_chars < 3) max_chars = 3;
     /* Truncate value if it doesn't fit */
     char vbuf[64];
     int vlen = (int)strlen(value);

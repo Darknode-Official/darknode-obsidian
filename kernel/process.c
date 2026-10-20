@@ -6,7 +6,6 @@
 
 static process_t *proc_table[PROC_MAX];
 static uint32_t   proc_count = 0;
-static uint32_t   next_pid = 0;
 static process_t *current_proc = NULL;
 static process_t *ready_head = NULL;
 
@@ -19,7 +18,6 @@ static void idle_task(void) {
 void process_init(void) {
     memset(proc_table, 0, sizeof(proc_table));
     proc_count = 0;
-    next_pid = 0;
     current_proc = NULL;
     ready_head = NULL;
 
@@ -32,11 +30,18 @@ void process_init(void) {
 process_t *process_create(const char *name, void (*entry)(void)) {
     if (proc_count >= PROC_MAX) return NULL;
 
+    /* The pid IS the proc_table index (process_kill frees the slot by pid), so it must be a free
+     * slot in [0, PROC_MAX) — never a monotonic counter, which would index out of bounds after
+     * PROC_MAX total creations even while slots are free. */
+    int slot = -1;
+    for (int i = 0; i < PROC_MAX; i++) { if (!proc_table[i]) { slot = i; break; } }
+    if (slot < 0) return NULL;
+
     process_t *proc = (process_t *)kmalloc(sizeof(process_t));
     if (!proc) return NULL;
     memset(proc, 0, sizeof(process_t));
 
-    proc->pid      = next_pid++;
+    proc->pid      = (uint32_t)slot;
     proc->state    = PROC_READY;
     proc->priority = 1;
     strncpy(proc->name, name, PROC_NAME_MAX - 1);
@@ -65,7 +70,7 @@ process_t *process_create(const char *name, void (*entry)(void)) {
     proc->ebp = 0;
     proc->eip = (uint32_t)entry;
 
-    proc_table[proc->pid] = proc;
+    proc_table[slot] = proc;
     proc_count++;
 
     /* Add to ready queue */
