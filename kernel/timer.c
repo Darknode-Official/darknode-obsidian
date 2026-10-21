@@ -12,6 +12,7 @@ static void timer_callback(registers_t *regs) {
 }
 
 void timer_init(uint32_t freq) {
+    if (freq == 0) freq = 100; /* avoid divide-by-zero on the PIT divisor below */
     timer_freq = freq;
     register_interrupt_handler(32, timer_callback);
     uint32_t divisor = 1193180 / freq;

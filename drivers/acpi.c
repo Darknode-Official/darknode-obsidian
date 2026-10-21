@@ -44,6 +44,9 @@ static acpi_rsdp_t *find_rsdp(void) {
 }
 
 static acpi_sdt_header_t *find_table(acpi_rsdt_t *rsdt, const char *sig) {
+    /* A malformed/short RSDT with length < the header would underflow `entries` to a huge
+       count and walk arbitrary memory as table pointers. */
+    if (rsdt->header.length < sizeof(acpi_sdt_header_t)) return 0;
     uint32_t entries = (rsdt->header.length - sizeof(acpi_sdt_header_t)) / 4;
     for (uint32_t i = 0; i < entries; i++) {
         acpi_sdt_header_t *h = (acpi_sdt_header_t *)(rsdt->entries[i]);
@@ -57,8 +60,11 @@ static void parse_s5(acpi_fadt_t *f) {
     /* Parse \_S5 from DSDT for sleep type values */
     uint8_t *dsdt = (uint8_t *)(f->dsdt);
     uint32_t dsdt_len = ((acpi_sdt_header_t *)dsdt)->length;
+    /* A short/corrupt DSDT length would make `dsdt_len - 8` underflow to ~UINT32_MAX and scan
+       gigabytes; bound by `i + 8 <= dsdt_len` so the inner reads also stay in range. */
+    if (dsdt_len < 44) { slp_typa = 5 << 10; slp_typb = 0; return; }
     /* search for "_S5_" or "\\_S5" */
-    for (uint32_t i = 36; i < dsdt_len - 8; i++) {
+    for (uint32_t i = 36; i + 8 <= dsdt_len; i++) {
         if (dsdt[i] == '_' && dsdt[i+1] == 'S' && dsdt[i+2] == '5' && dsdt[i+3] == '_') {
             /* skip to the package and extract SLP_TYPa/b */
             uint32_t j = i + 4;

@@ -527,12 +527,18 @@ static void calc_equals(void) {
 }
 
 static void calc_int_to_str(int v, char *buf) {
-    if (v < 0) { buf[0] = '-'; calc_int_to_str(-v, buf + 1); return; }
-    if (v == 0) { buf[0] = '0'; buf[1] = '\0'; return; }
+    /* Format via an unsigned magnitude: for v == INT_MIN, -v overflows back to INT_MIN
+       (still negative), so the old recursive "if (v < 0)" branch looped forever, writing
+       '-' one byte further along buf each time and overrunning the 16-byte destination. */
+    unsigned int uv;
+    int k = 0;
+    if (v < 0) { buf[k++] = '-'; uv = (unsigned int)0 - (unsigned int)v; }
+    else uv = (unsigned int)v;
     char tmp[16]; int i = 0;
-    while (v > 0 && i < 15) { tmp[i++] = '0' + (v % 10); v /= 10; }
-    for (int j = 0; j < i; j++) buf[j] = tmp[i - 1 - j];
-    buf[i] = '\0';
+    if (uv == 0) tmp[i++] = '0';
+    while (uv && i < 15) { tmp[i++] = '0' + (uv % 10); uv /= 10; }
+    while (i > 0) buf[k++] = tmp[--i];
+    buf[k] = '\0';
 }
 
 static void draw_calculator(int wid, int cx, int cy, int cw, int ch) {

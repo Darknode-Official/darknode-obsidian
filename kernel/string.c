@@ -80,6 +80,7 @@ size_t strlcat(char *dst, const char *src, size_t size) {
 }
 
 void itoa(int value, char *buf, int base) {
+    if (base < 2 || base > 36) { buf[0] = '\0'; return; } /* base<=1 loops forever; base 0 divides by zero */
     char tmp[36];
     int i = 0, neg = 0;
     if (value < 0 && base == 10) { neg = 1; value = -value; }
@@ -92,6 +93,7 @@ void itoa(int value, char *buf, int base) {
 }
 
 void utoa(uint32_t value, char *buf, int base) {
+    if (base < 2 || base > 36) { buf[0] = '\0'; return; } /* base<=1 loops forever; base 0 divides by zero */
     char tmp[36];
     int i = 0;
     do { int d = value % base; tmp[i++] = d < 10 ? '0' + d : 'a' + d - 10; value /= base; } while (value);

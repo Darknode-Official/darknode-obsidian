@@ -58,6 +58,9 @@ void *kmalloc(size_t size) {
 void kfree(void *ptr) {
     if (!ptr) return;
     block_t *b = (block_t *)((uint8_t *)ptr - BLOCK_HDR);
+    /* Reject a wild/interior pointer before dereferencing its "header": only free something that
+       lies inside the heap arena, or b->free/b->size/b->next read and corrupt arbitrary memory. */
+    if ((uint8_t *)b < (uint8_t *)HEAP_START || (uint8_t *)b >= (uint8_t *)HEAP_START + HEAP_SIZE) return;
     if (b->free) return; /* double free: ignore — else heap_used_bytes underflows and the coalesce pass relinks an already-merged block */
     b->free = true;
     heap_used_bytes -= b->size;
