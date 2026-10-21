@@ -304,13 +304,19 @@ void ahci_init(void) {
     }
 }
 
+/* A single PRDT entry carries at most 4 MiB = 8192 sectors. Reject count==0 (which
+ * would size the transfer as bytes-1 == 0xFFFFFFFF and DMA ~4 GiB into buf) and any
+ * count past one PRDT entry (count*512 overflow / 16-bit FIS sector-count truncation). */
+#define AHCI_MAX_SECTORS 8192
 int ahci_read(int p, uint64_t lba, uint32_t count, uint8_t *buf) {
     if (p < 0 || p >= AHCI_MAX_PORTS || !ports[p].active) return -1;
+    if (count == 0 || count > AHCI_MAX_SECTORS) return -1;
     return send_command(p, 0, lba, count, buf);
 }
 
 int ahci_write(int p, uint64_t lba, uint32_t count, const uint8_t *buf) {
     if (p < 0 || p >= AHCI_MAX_PORTS || !ports[p].active) return -1;
+    if (count == 0 || count > AHCI_MAX_SECTORS) return -1;
     return send_command(p, 1, lba, count, (uint8_t *)buf);
 }
 

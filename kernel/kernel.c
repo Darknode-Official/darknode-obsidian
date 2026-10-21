@@ -236,9 +236,17 @@ void kmain(uint32_t magic, multiboot2_info_t *mbi) {
     uint32_t *fb_addr = 0;
     int fb_w = 0, fb_h = 0, fb_pitch = 0, fb_bpp = 0;
     if (magic == MULTIBOOT2_MAGIC) {
+        /* Bound the tag walk by the boot-info block's own total_size, and reject a tag
+         * whose size would not advance the pointer (size < 8 -> infinite loop) or would
+         * run past the block (OOB read). Without this a zero/garbage size from the
+         * bootloader hangs the boot or dereferences framebuffer fields out of bounds. */
+        uint8_t *mbi_end = (uint8_t *)mbi + mbi->total_size;
         multiboot2_tag_t *tag = (multiboot2_tag_t *)((uint8_t *)mbi + 8);
-        while (tag->type != MULTIBOOT2_TAG_END) {
-            if (tag->type == MULTIBOOT2_TAG_FRAMEBUF) {
+        while ((uint8_t *)tag + sizeof(multiboot2_tag_t) <= mbi_end && tag->type != MULTIBOOT2_TAG_END) {
+            if (tag->size < sizeof(multiboot2_tag_t)) break;          /* would never advance */
+            if ((uint8_t *)tag + tag->size > mbi_end) break;          /* tag claims to run past the MBI */
+            if (tag->type == MULTIBOOT2_TAG_FRAMEBUF &&
+                (uint8_t *)tag + sizeof(multiboot2_tag_framebuffer_t) <= mbi_end) {
                 multiboot2_tag_framebuffer_t *fb = (multiboot2_tag_framebuffer_t *)tag;
                 fb_addr = (uint32_t *)(uint32_t)fb->addr;
                 fb_w = fb->width;
