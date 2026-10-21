@@ -180,6 +180,7 @@ static uint32_t proc_cpuinfo_read(vfs_node_t *node, uint32_t offset, uint32_t si
 
 vfs_node_t *ramfs_init(void) {
     ramfs_entry_t *root = (ramfs_entry_t *)kmalloc(sizeof(ramfs_entry_t));
+    if (!root) return NULL; /* early-boot OOM: don't deref a NULL root */
     memset(root, 0, sizeof(ramfs_entry_t));
     strcpy(root->node.name, "/");
     root->node.flags   = FS_DIRECTORY;
@@ -203,13 +204,13 @@ vfs_node_t *ramfs_init(void) {
 
     /* /proc virtual files */
     ramfs_entry_t *uptime_f = ramfs_create(proc, "uptime", FS_FILE);
-    uptime_f->node.read = proc_uptime_read;
+    if (uptime_f) uptime_f->node.read = proc_uptime_read;
 
     ramfs_entry_t *meminfo_f = ramfs_create(proc, "meminfo", FS_FILE);
-    meminfo_f->node.read = proc_meminfo_read;
+    if (meminfo_f) meminfo_f->node.read = proc_meminfo_read;
 
     ramfs_entry_t *cpuinfo_f = ramfs_create(proc, "cpuinfo", FS_FILE);
-    cpuinfo_f->node.read = proc_cpuinfo_read;
+    if (cpuinfo_f) cpuinfo_f->node.read = proc_cpuinfo_read;
 
     return &root->node;
 }

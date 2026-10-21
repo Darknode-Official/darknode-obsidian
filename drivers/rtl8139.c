@@ -167,10 +167,14 @@ int rtl8139_receive(void *buf, uint16_t max_len) {
     if (copy_len > max_len) copy_len = max_len;
 
     uint32_t data_offset = rx_offset + 4;
+    /* rx_offset can be up to RTL_RXBUF_SIZE-1, so data_offset may pass the ring end; wrap the
+       start too, or `first = RTL_RXBUF_SIZE - data_offset` below underflows a uint32 to ~4 GiB
+       and the memcpy becomes an unbounded OOB read/write. */
+    if (data_offset >= RTL_RXBUF_SIZE) data_offset -= RTL_RXBUF_SIZE;
     if (data_offset + copy_len <= RTL_RXBUF_SIZE) {
         memcpy(buf, rx_buffer + data_offset, copy_len);
     } else {
-        /* wrap around */
+        /* wrap around the ring end: first >= 1 and copy_len > first both hold now */
         uint32_t first = RTL_RXBUF_SIZE - data_offset;
         memcpy(buf, rx_buffer + data_offset, first);
         memcpy((uint8_t *)buf + first, rx_buffer, copy_len - first);
