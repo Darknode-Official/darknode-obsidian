@@ -8,6 +8,7 @@ static process_t *proc_table[PROC_MAX];
 static uint32_t   proc_count = 0;
 static process_t *current_proc = NULL;
 static process_t *ready_head = NULL;
+static process_t *reap_pending = NULL; /* a process that exited while current; freed by schedule() after switching off its stack */
 
 static void idle_task(void) {
     while (1) {
@@ -103,10 +104,23 @@ void process_kill(uint32_t pid) {
         if (proc == ready_head) ready_head = proc->next;
     }
 
-    if (proc->kernel_stack) kfree(proc->kernel_stack);
-    kfree(proc);
     proc_table[pid] = NULL;
     proc_count--;
+
+    if (proc == current_proc) {
+        /* We are still executing on this process's kernel stack, and schedule()
+         * will dereference current_proc on the next tick, so freeing it here is a
+         * use-after-free. Hand it to the scheduler, which reaps it once it has
+         * switched to another process. (Flush any prior pending reap first.) */
+        if (reap_pending && reap_pending != current_proc) {
+            if (reap_pending->kernel_stack) kfree(reap_pending->kernel_stack);
+            kfree(reap_pending);
+        }
+        reap_pending = proc;
+    } else {
+        if (proc->kernel_stack) kfree(proc->kernel_stack);
+        kfree(proc);
+    }
 }
 
 process_t *process_current(void) {
@@ -126,6 +140,14 @@ uint32_t process_count(void) {
    restores its ESP. Context switch happens via the modified stack pointer. */
 void schedule(registers_t *regs) {
     if (!ready_head || !current_proc) return;
+
+    /* Reap a process that exited on an earlier tick, now that current_proc has
+     * moved off its (soon-to-be-freed) kernel stack. */
+    if (reap_pending && reap_pending != current_proc) {
+        if (reap_pending->kernel_stack) kfree(reap_pending->kernel_stack);
+        kfree(reap_pending);
+        reap_pending = NULL;
+    }
 
     /* Save current context */
     current_proc->esp = regs->esp;

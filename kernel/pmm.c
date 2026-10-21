@@ -68,6 +68,11 @@ uint32_t pmm_alloc_page(void) {
 
 void pmm_free_page(uint32_t addr) {
     uint32_t page = addr / PAGE_SIZE;
+    /* Never free the reserved first 2 MiB (kernel/VGA/BIOS) — clearing those bits
+     * would let a later alloc hand out a page overlapping the kernel image. Also
+     * ignore anything outside the managed bitmap. The test_page guard then makes a
+     * free of a never-allocated page a no-op (no used_pages_count underflow). */
+    if (page < 512 || page >= BITMAP_SIZE * 8) return;
     if (test_page(page)) {
         clear_page(page);
         used_pages_count--;

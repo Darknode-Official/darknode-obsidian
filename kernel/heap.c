@@ -37,6 +37,10 @@ static void split_block(block_t *b, size_t size) {
 
 void *kmalloc(size_t size) {
     if (size == 0) return NULL;
+    /* The 8-byte round-up below overflows (to 0, trivially "fitting" any block) for
+     * sizes near SIZE_MAX, so reject them first. Such an allocation never fits the
+     * heap anyway. */
+    if (size > (size_t)0xFFFFFFF8u) return NULL;
     size = (size + 7) & ~7;  /* 8-byte alignment */
     block_t *b = heap_head;
     while (b) {

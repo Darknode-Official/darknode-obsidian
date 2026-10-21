@@ -18,6 +18,12 @@ static uint32_t ramfs_read(vfs_node_t *node, uint32_t offset, uint32_t size, uin
 
 static uint32_t ramfs_write(vfs_node_t *node, uint32_t offset, uint32_t size, const uint8_t *buf) {
     ramfs_entry_t *entry = (ramfs_entry_t *)node;
+    if (size == 0) return 0;
+    /* Reject an offset+size that would overflow uint32 or exceed the ramfs file
+     * ceiling. Without this, a wrapping `needed` can be <= data_cap, skip the grow
+     * branch, and let the memcpy below write far past the allocation (heap OOB). */
+    const uint32_t ceil = RAMFS_MAX_BLOCKS * RAMFS_BLOCK_SIZE;
+    if (offset > ceil || size > ceil - offset) return 0;
     uint32_t needed = offset + size;
 
     if (needed > entry->data_cap) {
