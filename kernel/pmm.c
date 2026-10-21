@@ -31,10 +31,16 @@ void pmm_init(multiboot2_info_t *mbi) {
             multiboot2_tag_mmap_t *mmap = (multiboot2_tag_mmap_t *)tag;
             multiboot2_mmap_entry_t *entry = (multiboot2_mmap_entry_t *)((uint32_t)mmap + 16);
             multiboot2_mmap_entry_t *end = (multiboot2_mmap_entry_t *)((uint32_t)mmap + mmap->size);
+            /* The bitmap covers only the low 4 GiB (BITMAP_SIZE*8 pages). Clamp every
+             * region to that window BEFORE narrowing base/len to uint32_t, so a region
+             * above 4 GiB (or one spanning past it) can't truncate/wrap into a bogus
+             * start_page/page_count. */
+            const uint64_t window = (uint64_t)BITMAP_SIZE * 8 * PAGE_SIZE;
             while (entry < end) {
-                if (entry->type == MULTIBOOT2_MMAP_AVAILABLE) {
+                if (entry->type == MULTIBOOT2_MMAP_AVAILABLE && entry->base_addr < window) {
                     uint64_t base = entry->base_addr;
                     uint64_t len  = entry->length;
+                    if (base + len > window) len = window - base;   /* only the mapped part */
                     total_mem += (uint32_t)(len / 1024);
                     uint32_t start_page = (uint32_t)((base + PAGE_SIZE - 1) / PAGE_SIZE);
                     uint32_t page_count = (uint32_t)(len / PAGE_SIZE);
@@ -43,10 +49,15 @@ void pmm_init(multiboot2_info_t *mbi) {
                         total_pages++;
                     }
                 }
+                /* entry_size of 0 is malformed and would spin this loop forever. */
+                if (mmap->entry_size == 0) break;
                 entry = (multiboot2_mmap_entry_t *)((uint32_t)entry + mmap->entry_size);
             }
         }
-        tag = (multiboot2_tag_t *)((uint32_t)tag + ((tag->size + 7) & ~7));
+        /* A zero-size tag aligns to a 0-byte advance and would spin forever. */
+        uint32_t adv = (tag->size + 7) & ~7;
+        if (adv == 0) break;
+        tag = (multiboot2_tag_t *)((uint32_t)tag + adv);
     }
 
     /* Reserve first 2 MiB (kernel + VGA + BIOS) */
