@@ -28,7 +28,11 @@ void pci_write(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint32_t
 
 static void scan_bus(uint8_t bus) {
     for (uint8_t slot = 0; slot < 32 && num_devices < MAX_PCI_DEVICES; slot++) {
-        for (uint8_t func = 0; func < 8; func++) {
+        /* bound the func loop too: a multifunction slot writes up to 8 entries,
+           so checking num_devices only in the slot loop let devices[num_devices++]
+           run past the 64-slot array (corrupting num_devices + adjacent BSS) on a
+           machine presenting many PCI functions. */
+        for (uint8_t func = 0; func < 8 && num_devices < MAX_PCI_DEVICES; func++) {
             uint32_t reg0 = pci_read(bus, slot, func, 0);
             uint16_t vendor = reg0 & 0xFFFF;
             if (vendor == 0xFFFF) { if (func == 0) break; continue; }
