@@ -66,7 +66,13 @@ static int dns_skip_name(const uint8_t *buf, int offset, int buf_len) {
 static void dns_response_handler(uint32_t src_ip, uint16_t src_port,
                                   const void *data, uint16_t length)
 {
-    (void)src_ip; (void)src_port;
+    /* Only trust a reply from the configured resolver on the DNS port. Without
+     * this, an off-path attacker who guesses the 16-bit transaction id could
+     * inject a forged A record and poison dns_cache. Addresses are stored in a
+     * single wire-order representation across send and receive, and src_port is
+     * delivered in host order, so these compare directly. */
+    if (src_ip != dns_server_ip) return;
+    if (src_port != DNS_PORT) return;
     if (length < sizeof(dns_header_t)) return;
 
     const dns_header_t *hdr = (const dns_header_t *)data;

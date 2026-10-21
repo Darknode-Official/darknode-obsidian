@@ -24,8 +24,17 @@ static void ne_dma_read(uint16_t src, void *dst, uint16_t count) {
     ne_write(NE_RSAR1, src >> 8);
     ne_write(NE_CR, NE_CR_RD0 | NE_CR_STA); /* remote read */
     uint16_t *p = (uint16_t *)dst;
-    for (uint16_t i = 0; i < count; i += 2)
+    uint16_t i = 0;
+    for (; i + 2 <= count; i += 2)
         *p++ = inw(iobase + NE_DATA);
+    if (i < count) {
+        /* Odd byte count: the data port only yields full 16-bit words, so read
+         * one more word but store just its low byte. Writing the whole word
+         * would clobber one byte past the caller's buffer (an OOB write when a
+         * caller ever passes an odd count or odd-sized dst). */
+        uint16_t last = inw(iobase + NE_DATA);
+        *((uint8_t *)p) = (uint8_t)(last & 0xFF);
+    }
     ne_write(NE_ISR, NE_ISR_RDC);
 }
 
