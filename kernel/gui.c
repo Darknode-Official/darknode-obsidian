@@ -181,7 +181,7 @@ static void draw_desktop(void) {
 
     /* top bar — subtle, like a panel */
     fb_fill_rect(0, 0, sw, 22, T_PANEL);
-    fb_text(8, 5, "Darknode OS", T_ACCENT);
+    fb_text(8, 5, "Darknode Obsidian", T_ACCENT);
     char clk[16]; uptime_str(clk);
     /* status indicators on top bar */
     fb_fill_rect(sw - 180, 7, 6, 6, T_OK); /* network dot */
@@ -356,7 +356,7 @@ static void draw_start_menu(void) {
 static void __attribute__((unused)) draw_sysinfo(int wid, int cx, int cy, int cw, int ch) {
     (void)wid; (void)cw; (void)ch;
     char buf[32]; int y = cy;
-    fb_text(cx, y, "Darknode OS v0.1.0", T_ACCENT); y += 16;
+    fb_text(cx, y, "Darknode Obsidian v0.1.0", T_ACCENT); y += 16;
     fb_text(cx, y, "Custom x86 Kernel", T_TEXT); y += 24;
     fb_text(cx, y, "Memory:  128 MB", T_TEXT); y += 16;
     fb_text(cx, y, "Timer:   1000 Hz PIT", T_TEXT); y += 16;
@@ -371,7 +371,7 @@ static void __attribute__((unused)) draw_sysinfo(int wid, int cx, int cy, int cw
 static void draw_welcome(int wid, int cx, int cy, int cw, int ch) {
     (void)wid; (void)cw; (void)ch;
     int y = cy;
-    fb_text(cx, y, "Welcome to Darknode OS", T_ACCENT); y += 24;
+    fb_text(cx, y, "Welcome to Darknode Obsidian", T_ACCENT); y += 24;
     fb_text(cx, y, "A security operating system built", T_TEXT); y += 16;
     fb_text(cx, y, "from scratch. No Linux, no borrowed", T_TEXT); y += 16;
     fb_text(cx, y, "code -- just raw x86 metal.", T_TEXT); y += 24;
@@ -816,7 +816,7 @@ static void draw_settings(int wid, int cx, int cy, int cw, int ch) {
     case 9: /* Updates */
         fb_text(px, y, "Software Updates", T_ACCENT); y += 28;
         fb_fill_rect(px + 8, y, pw - 16, 60, T_PANEL);
-        fb_text(px + 18, y + 8, "Darknode OS v0.1.0", T_TEXT);
+        fb_text(px + 18, y + 8, "Darknode Obsidian v0.1.0", T_TEXT);
         fb_text(px + 18, y + 24, "Your system is up to date.", T_OK);
         fb_text(px + 18, y + 40, "Last checked: Never", T_DIM);
         y += 68;
@@ -833,7 +833,7 @@ static void draw_settings(int wid, int cx, int cy, int cw, int ch) {
 
     case 10: /* System */
         fb_text(px, y, "System", T_ACCENT); y += 28;
-        draw_setting_row(px + 8, y, pw, "Kernel", "Darknode OS v0.1.0"); y += 20;
+        draw_setting_row(px + 8, y, pw, "Kernel", "Darknode Obsidian v0.1.0"); y += 20;
         draw_setting_row(px + 8, y, pw, "Architecture", "x86 (i386)"); y += 20;
         draw_setting_row(px + 8, y, pw, "Scheduler", "Round-robin preemptive"); y += 20;
         draw_setting_row(px + 8, y, pw, "Syscalls", "INT 0x80 (11 handlers)"); y += 20;
@@ -1233,7 +1233,7 @@ static void launch_app(int index) {
     switch (index) {
     case 0: { int tid = gui_create_window("Terminal", ox, oy, 540, 340, 0);
         gui_window_print(tid,
-            "Darknode OS v0.1.0 (tty1)\n"
+            "Darknode Obsidian v0.1.0 (tty1)\n"
             "Type 'help' for commands.\n"
             "\n"
             "root@darknode:~# "
@@ -1673,7 +1673,7 @@ static void term_exec(gui_window_t *w) {
     } else if (strcmp(cmd, "hostname") == 0) {
         term_append(w, "darknode-os\n");
     } else if (strcmp(cmd, "uname") == 0 || strcmp(cmd, "uname -a") == 0) {
-        term_append(w, "Darknode OS 0.1.0 x86 i386\n");
+        term_append(w, "Darknode Obsidian 0.1.0 x86 i386\n");
     } else if (strcmp(cmd, "uptime") == 0 || strcmp(cmd, "date") == 0) {
         char ubuf[16];
         uint32_t sec = timer_get_ticks() / 1000;
@@ -1722,7 +1722,7 @@ static void term_exec(gui_window_t *w) {
     } else if (strcmp(cmd, "neofetch") == 0) {
         term_append(w, "root@darknode-os\n");
         term_append(w, "----------------\n");
-        term_append(w, "OS:     Darknode OS 0.1.0\n");
+        term_append(w, "OS:     Darknode Obsidian 0.1.0\n");
         term_append(w, "Kernel: Custom x86\n");
         term_append(w, "Shell:  darksh\n");
         term_append(w, "CPU:    x86 (i386)\n");
@@ -1804,7 +1804,7 @@ void gui_run(void) {
                         80 + (win_count * 20) % 200, 60 + (win_count * 20) % 150,
                         540, 340, 0);
                     gui_window_print(id,
-                        "Darknode OS v0.1.0 (tty1)\n"
+                        "Darknode Obsidian v0.1.0 (tty1)\n"
                         "Type 'help' for commands.\n\n"
                         "root@darknode:~# ");
                     dirty = 1;

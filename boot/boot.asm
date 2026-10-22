@@ -1,4 +1,4 @@
-; Darknode OS — boot entry point
+; Darknode Obsidian — boot entry point
 ; Sets up the stack and jumps to the C kernel.
 bits 32
 section .bss
